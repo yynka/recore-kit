@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<materials>
+  <material depletable="true" id="1" name="U‑Pu‑Zr fuel">
+    <density units="g/cm3" value="19.1"/>
+    <nuclide ao="0.0013552331135205768" name="U234"/>
+    <nuclide ao="0.15162360361477725" name="U235"/>
+    <nuclide ao="0.8463266543399033" name="U238"/>
+    <nuclide ao="0.0006945089317988968" name="U236"/>
+  </material>
+  <material id="2" name="HT9">
+    <density units="g/cm3" value="7.8"/>
+    <nuclide ao="0.05845" name="Fe54"/>
+    <nuclide ao="0.91754" name="Fe56"/>
+    <nuclide ao="0.02119" name="Fe57"/>
+    <nuclide ao="0.00282" name="Fe58"/>
+  </material>
+</materials>

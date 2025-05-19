@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<geometry>
+  <cell id="1" material="1" region="-1 -4 3 -6 5 -8 7" universe="1"/>
+  <cell id="2" material="2" region="1 -2 -4 3 -6 5 -8 7" universe="1"/>
+  <cell id="3" material="void" region="2 -4 3 -6 5 -8 7" universe="1"/>
+  <cell id="4" material="void" region="4 | -3 | 6 | -5 | 8 | -7" universe="1"/>
+  <surface coeffs="0.0 0.0 0.4" id="1" type="z-cylinder"/>
+  <surface coeffs="0.0 0.0 0.42000000000000004" id="2" type="z-cylinder"/>
+  <surface boundary="vacuum" coeffs="-0.65" id="3" type="x-plane"/>
+  <surface boundary="vacuum" coeffs="0.65" id="4" type="x-plane"/>
+  <surface boundary="vacuum" coeffs="-0.65" id="5" type="y-plane"/>
+  <surface boundary="vacuum" coeffs="0.65" id="6" type="y-plane"/>
+  <surface boundary="vacuum" coeffs="-1.0" id="7" type="z-plane"/>
+  <surface boundary="vacuum" coeffs="1.0" id="8" type="z-plane"/>
+</geometry>
