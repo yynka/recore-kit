@@ -22,7 +22,12 @@ def _rhs(t, y, rho):
 
 def solve(rho_step=0.002, t_end=5.0, dt=1e-3):
     y = np.zeros(7)
-    y[0] = 1.0  # power
+    y[0] = 1.0  # Initial power P(0) = 1.0
+
+    # Set initial delayed neutron precursor concentrations to steady-state values
+    # at P=1.0, rho=0.0: Ci = Beta_i / (Lambda * Lambda_i)
+    y[1:] = _B / (GEN_TIME * _L)
+
     ts, ps = [0.0], [1.0]
     t = 0.0
     while t < t_end:

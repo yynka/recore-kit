@@ -23,4 +23,9 @@ def test_solve_rho_step(rho_step):
     assert ts.shape == ps.shape
     assert np.isclose(ts[0], 0.0)
     assert np.isclose(ps[0], 1.0)
-    assert np.all(ps > 0) 
+    assert np.all(ps > 0)
+
+def test_solve_conserves_power_at_zero_rho():
+    ts, ps = kinetics.solve(rho_step=0.0, t_end=5.0, dt=1e-3)
+    # Power should remain close to 1.0 for all times
+    assert np.allclose(ps, 1.0, atol=1e-2) 
