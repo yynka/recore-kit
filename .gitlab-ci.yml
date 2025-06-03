@@ -1,7 +1,4 @@
-print(default_api.edit_file(
-    target_file=".gitlab-ci.yml",
-    instructions="Making comments in the GitLab CI file more concise for easier skimming.",
-    code_edit="""# .gitlab-ci.yml
+# .gitlab-ci.yml
 
 # Pipeline inputs for manual triggers
 spec:
@@ -127,5 +124,3 @@ analyze_data:
 #   #     - public # For GitLab Pages
 #   # rules:
 #   #   - if: '$CI_COMMIT_BRANCH == "main"'
-"""
-))
