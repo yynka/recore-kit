@@ -18,35 +18,34 @@ variables:
   # by the path determined in before_script after extraction.
   OPENMC_CROSS_SECTIONS: "$NUCLEAR_DATA_DIR/cross_sections/cross_sections.xml" # **ADJUST PATH IF NEEDED based on tarball structure**
 
-
 # Commands run before every job
 before_script:
   # Activate the conda environment
-  - conda activate recore-env
+- conda activate recore-env
   # Download and extract nuclear data
-  - mkdir -p "$NUCLEAR_DATA_DIR"
-  - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
-  - tar -xzf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
+- mkdir -p "$NUCLEAR_DATA_DIR"
+- wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
+- tar -xzf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
   # The OPENMC_CROSS_SECTIONS variable is now set correctly in the 'variables' block
   # It uses the path derived from NUCLEAR_DATA_DIR and the expected extracted directory name.
 
   # Add the project root to PYTHONPATH so Python can find the 'recore' package
-  - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
+- export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
 # Linting job
 lint:
   stage: lint
   script:
-    - echo "Running lint checks (placeholder)"
+- echo "Running lint checks (placeholder)"
     # Add your linting commands here (e.g., flake8, black --check, etc.)
-    - true # Replace with actual lint command
+- true # Replace with actual lint command
 
 # Pytest job
 tests:
   stage: tests
   script:
-    - echo "Running unit tests"
-    - pytest recore/
+- echo "Running unit tests"
+- pytest recore/
   needs:
     - lint # Ensure linting passes before running tests
 
@@ -54,8 +53,8 @@ tests:
 smoke_run:
   stage: smoke_run
   script:
-    - echo "Running OpenMC smoke test"
-    - python3 recore/smoke_openmc.py
+- echo "Running OpenMC smoke test"
+- python3 recore/smoke_openmc.py
   artifacts:
     paths:
       - statepoint.10.h5 # Adjust filename if needed
@@ -70,9 +69,9 @@ smoke_run:
 analyze_data:
   stage: analyze_data
   script:
-    - echo "Analyzing data from smoke run"
-    - python3 analyze.py # This script should use the generated statepoint
-    - pytest recore/test_data.py # Run data analysis tests
+- echo "Analyzing data from smoke run"
+- python3 analyze.py # This script should use the generated statepoint
+- pytest recore/test_data.py # Run data analysis tests
   needs:
     - smoke_run # Ensure smoke run completes and generates artifacts
 
@@ -80,7 +79,7 @@ analyze_data:
 # deploy:
 #   stage: deploy
 #   script:
-#     - echo "Deploying dashboard static export (optional)"
+# - echo "Deploying dashboard static export (optional)"
 #     # Commands to build static export or deploy
 #   needs:
 #     - analyze_data # Ensure analysis is complete before deploying
