@@ -1,126 +1,71 @@
-# .gitlab-ci.yml
+# .gitlab-ci.yml  (uniform environment)
 
-# Pipeline inputs for manual triggers
-spec:
-  inputs:
-    openmc_data_url:
-      description: "URL to the OpenMC data archive (.tar.xz)."
-      type: string
-      # Default data URL (ENDF/B-VIII.0)
-      default: "https://openmc.org/assets/data/ENDF-B%2fVIII.0%2fcross_sections.xml"
+image: mambaorg/micromamba:1.5.3
 
-# Pipeline stages
-stages:
-  - lint
-  - test
-  - smoke
-  - analyze
+stages: [lint, tests, smoke_run, analyze_data]
 
-# Commands run before every job
-before_script:
-  # Install system dependencies
-  - apt-get update && apt-get install -y --no-install-recommends python3 python3-pip python3-venv build-essential cmake git wget tar pkg-config libhdf5-dev libeigen3-dev libfmt-dev libpugix-dev libxtensor-dev libxtl-dev
+# Re‑usable setup (download deps once per job container)
+.default_setup: &setup
+  before_script:
+    - micromamba install -y -n base -c conda-forge python=3.12 \
+        openmc pyarrow polars numba dash plotly pytest black
+    - eval "$(micromamba shell hook -s bash)"
+    - micromamba activate base
+    - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
-  # Setup and activate Python venv
-  - python3 -m venv $CI_PROJECT_DIR/recore-env
-  - source $CI_PROJECT_DIR/recore-env/bin/activate
-
-  # Upgrade pip and install project deps
-  - pip install --upgrade pip
-  - pip install -r requirements.txt
-
-  # Install local OpenMC Python API
-  - pip install ./openmc
-
-  # Install linters
-  - pip install flake8 black isort
-
-  # Download, extract, and set OPENMC_CROSS_SECTIONS env var
-  - echo "Downloading OpenMC data from $[[ inputs.openmc_data_url ]]"
-  - wget "$[[ inputs.openmc_data_url ]]" -O cross_sections.xml.tar.gz
-  - mkdir -p $CI_PROJECT_DIR/openmc_data
-  # Strip top-level dir during extract
-  - tar -xzf cross_sections.xml.tar.gz -C $CI_PROJECT_DIR/openmc_data --strip-components=1
-  - rm cross_sections.xml.tar.gz # Clean up archive
-  - export OPENMC_CROSS_SECTIONS=$CI_PROJECT_DIR/openmc_data/cross_sections.xml
-  - echo "OPENMC_CROSS_SECTIONS set to: $OPENMC_CROSS_SECTIONS"
-
-# Linting job
 lint:
+  <<: *setup
   stage: lint
-  image: python:3.12-slim
-  script:
-    # Activate venv
-    - source $CI_PROJECT_DIR/recore-env/bin/activate
-    # Run linters (example: flake8 .)
-    - echo "Running linting..."
+  script: black --check recore# .gitlab-ci.yml  (uniform environment)
 
-# Pytest job
-test:
-  stage: test
-  image: python:3.12-slim
-  script:
-    # Activate venv
-    - source $CI_PROJECT_DIR/recore-env/bin/activate
-    # Set PYTHONPATH for local imports
-    - export PYTHONPATH=$CI_PROJECT_DIR
-    # Run pytest
-    - echo "Running pytest..."
-    - pytest recore/
+image: mambaorg/micromamba:1.5.3
 
-# OpenMC smoke test job
+stages: [lint, tests, smoke_run, analyze_data]
+
+# Re‑usable setup (download deps once per job container)
+.default_setup: &setup
+  before_script:
+    - micromamba install -y -n base -c conda-forge python=3.12 \
+        openmc pyarrow polars numba dash plotly pytest black
+    - eval "$(micromamba shell hook -s bash)"
+    - micromamba activate base
+    - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
+
+lint:
+  <<: *setup
+  stage: lint
+  script: black --check recore
+
+tests:
+  <<: *setup
+  stage: tests
+  script: pytest recore/
+  needs: [lint]
+
 smoke_run:
-  stage: smoke
-  image: python:3.12-slim
-  script:
-    # Activate venv
-    - source $CI_PROJECT_DIR/recore-env/bin/activate
-    # Set PYTHONPATH
-    - export PYTHONPATH=$CI_PROJECT_DIR
-    # Run smoke test script
-    - echo "Running OpenMC smoke test..."
-    - python3 recore/smoke_openmc.py
-  artifacts:
-    paths:
-      # Collect run outputs
-      - run/statepoint.*.h5
-      - run/mesh_flux.parquet
-      - run/mesh_flux.csv
-      - run/mesh_flux.png
-    expire_in: 1 day
+  <<: *setup
+  stage: smoke_run
+  script: python recore/smoke_openmc.py
+  needs: [tests]
 
-# Analysis job
+
+tests:
+  <<: *setup
+  stage: tests
+  script: pytest recore/
+  needs: [lint]
+
+smoke_run:
+  <<: *setup
+  stage: smoke_run
+  script: python recore/smoke_openmc.py
+  needs: [tests]
+
 analyze_data:
-  stage: analyze
-  image: python:3.12-slim
+  stage: analyze_data
   script:
-    # Activate venv
-    - source $CI_PROJECT_DIR/recore-env/bin/activate
-    # Set PYTHONPATH
-    - export PYTHONPATH=$CI_PROJECT_DIR
-    # Ensure run dir exists and run analysis script
-    - mkdir -p run
-    - echo "Running analysis script..."
+    - echo "Analyzing data from smoke run"
     - python3 analyze.py
-  dependencies:
-    # Depends on smoke_run artifacts
+    - pytest recore/test_data.py
+  needs:
     - smoke_run
-  artifacts:
-    paths:
-      # Collect analysis outputs
-      - run/mesh_flux.csv
-      - run/mesh_flux.png
-    expire_in: 1 day
-
-# # Optional static export job
-# static_export:
-#   stage: static export
-#   image: python:3.12-slim # Or suitable image
-#   script:
-#     - source $CI_PROJECT_DIR/recore-env/bin/activate
-#     # Add static export commands here
-#   # artifacts:
-#   #   paths:
-#   #     - public # For GitLab Pages
-#   # rules:
-#   #   - if: '$CI_COMMIT_BRANCH == "main"'

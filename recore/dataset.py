@@ -1,6 +1,7 @@
 """
 Convert an OpenMC statepoint (HDF5) to compressed Parquet.
 """
+
 from pathlib import Path
 import argparse
 import openmc

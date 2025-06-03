@@ -1,6 +1,7 @@
 """
 Very small point‑reactor‑kinetics solver (6 delayed groups).
 """
+
 import numba as nb
 import numpy as np
 
@@ -9,6 +10,7 @@ _B = np.array([0.00025, 0.0012, 0.0012, 0.0027, 0.0008, 0.0003])
 
 BETA_EFF = _B.sum()
 GEN_TIME = 2.0e-5  # s
+
 
 @nb.njit
 def _rhs(t, y, rho):
@@ -19,6 +21,7 @@ def _rhs(t, y, rho):
     out[0] = dP
     out[1:] = dC
     return out
+
 
 def solve(rho_step=0.002, t_end=5.0, dt=1e-3):
     y = np.zeros(7)
