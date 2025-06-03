@@ -1,55 +1,38 @@
-# .gitlab-ci.yml
+# .gitlab-ci.yml  — corrected lint section
 
-# Pipeline stages
 stages:
   - lint
   - tests
   - smoke_run
   - analyze_data
-  - deploy # Optional stage for static export or deployment
+  - deploy
 
 variables:
-  # Define the path where nuclear data will be downloaded within the job
   NUCLEAR_DATA_DIR: "$CI_PROJECT_DIR/nuclear_data"
-  # Default data URL (ENDF/B-VIII.0)
-  NUCLEAR_DATA_URL: "https://example.com/path/to/cross_sections.tar.gz" # **REPLACE WITH ACTUAL URL**
-  # Set the OPENMC_CROSS_SECTIONS environment variable for OpenMC
-  # This is set here with a default relative path, but it will be overridden
-  # by the path determined in before_script after extraction.
-  OPENMC_CROSS_SECTIONS: "$NUCLEAR_DATA_DIR/cross_sections/cross_sections.xml" # **ADJUST PATH IF NEEDED based on tarball structure**
+  NUCLEAR_DATA_URL: "https://example.com/path/to/cross_sections.tar.gz"
+  OPENMC_CROSS_SECTIONS: "$NUCLEAR_DATA_DIR/cross_sections/cross_sections.xml"
 
-# Commands run before every job
 before_script:
-  # Activate the conda environment
   - conda activate recore-env
-  # Download and extract nuclear data
   - mkdir -p "$NUCLEAR_DATA_DIR"
   - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
   - tar -xzf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
-  # The OPENMC_CROSS_SECTIONS variable is now set correctly in the 'variables' block
-  # It uses the path derived from NUCLEAR_DATA_DIR and the expected extracted directory name.
-
-  # Add the project root to PYTHONPATH so Python can find the 'recore' package
   - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
-# Linting job
 lint:
   stage: lint
   script:
     - echo "Running lint checks (placeholder)"
-    # Add your linting commands here (e.g., flake8, black --check, etc.)
-    - true # Replace with actual lint command
+    - black --check recore               # ← or flake8, isort, etc.
 
-# Pytest job
 tests:
   stage: tests
   script:
     - echo "Running unit tests"
     - pytest recore/
   needs:
-    - lint # Ensure linting passes before running tests
+    - lint
 
-# OpenMC smoke test job
 smoke_run:
   stage: smoke_run
   script:
@@ -57,31 +40,19 @@ smoke_run:
     - python3 recore/smoke_openmc.py
   artifacts:
     paths:
-      - statepoint.10.h5 # Adjust filename if needed
-      - analysis_output.parquet # Parquet file name from analyze.py
-      - analysis_output.csv # CSV file name from analyze.py
-      - mesh_flux_heatmap.png # Plot file name from analyze.py
+      - statepoint.10.h5
+      - analysis_output.parquet
+      - analysis_output.csv
+      - mesh_flux_heatmap.png
     expire_in: 1 week
   needs:
-    - tests # Ensure tests pass before running the smoke test
+    - tests
 
-# Analysis job
 analyze_data:
   stage: analyze_data
   script:
     - echo "Analyzing data from smoke run"
-    - python3 analyze.py # This script should use the generated statepoint
-    - pytest recore/test_data.py # Run data analysis tests
+    - python3 analyze.py
+    - pytest recore/test_data.py
   needs:
-    - smoke_run # Ensure smoke run completes and generates artifacts
-
-# # Optional static export job
-# deploy:
-#   stage: deploy
-#   script:
-#     - echo "Deploying dashboard static export (optional)"
-#     # Commands to build static export or deploy
-#   needs:
-#     - analyze_data # Ensure analysis is complete before deploying
-#   only:
-#     - main # Example: Only deploy from the main branch
+    - smoke_run
