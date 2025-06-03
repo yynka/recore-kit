@@ -16,6 +16,24 @@ stages: [lint, tests, smoke_run, analyze_data]
 lint:
   <<: *setup
   stage: lint
+  script: black --check recore# .gitlab-ci.yml  (uniform environment)
+
+image: mambaorg/micromamba:1.5.3
+
+stages: [lint, tests, smoke_run, analyze_data]
+
+# Re‑usable setup (download deps once per job container)
+.default_setup: &setup
+  before_script:
+    - micromamba install -y -n base -c conda-forge python=3.12 \
+        openmc pyarrow polars numba dash plotly pytest black
+    - eval "$(micromamba shell hook -s bash)"
+    - micromamba activate base
+    - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
+
+lint:
+  <<: *setup
+  stage: lint
   script: black --check recore
 
 tests:
@@ -29,3 +47,25 @@ smoke_run:
   stage: smoke_run
   script: python recore/smoke_openmc.py
   needs: [tests]
+
+
+tests:
+  <<: *setup
+  stage: tests
+  script: pytest recore/
+  needs: [lint]
+
+smoke_run:
+  <<: *setup
+  stage: smoke_run
+  script: python recore/smoke_openmc.py
+  needs: [tests]
+
+analyze_data:
+  stage: analyze_data
+  script:
+    - echo "Analyzing data from smoke run"
+    - python3 analyze.py
+    - pytest recore/test_data.py
+  needs:
+    - smoke_run
