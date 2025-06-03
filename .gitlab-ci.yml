@@ -19,7 +19,7 @@ variables:
     # Add steps to download and extract nuclear data
     - mkdir -p "$NUCLEAR_DATA_DIR"
     - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
-    - tar -xzf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
+    - tar -xJf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
     - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
 lint:
