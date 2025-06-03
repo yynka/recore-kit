@@ -13,7 +13,7 @@ variables:
 .default_setup: &setup
   before_script:
     - micromamba install -y -n base -c conda-forge python=3.12 \
-        openmc pyarrow polars numba dash plotly pytest black
+        openmc pyarrow polars numba dash plotly pytest black wget
     - eval "$(micromamba shell hook -s bash)"
     - micromamba activate base
     # Add steps to download and extract nuclear data
