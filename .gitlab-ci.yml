@@ -1,14 +1,5 @@
 # .gitlab-ci.yml
 
-# Pipeline inputs for manual triggers
-spec:
-  inputs:
-    nuclear_data_url:
-      description: URL to download the nuclear data archive
-      type: string
-      # Default data URL (ENDF/B-VIII.0)
-      default: "https://example.com/path/to/cross_sections.tar.gz" # **REPLACE WITH ACTUAL URL**
-
 # Pipeline stages
 stages:
   - lint
@@ -20,6 +11,13 @@ stages:
 variables:
   # Define the path where nuclear data will be downloaded within the job
   NUCLEAR_DATA_DIR: "$CI_PROJECT_DIR/nuclear_data"
+  # Default data URL (ENDF/B-VIII.0)
+  NUCLEAR_DATA_URL: "https://example.com/path/to/cross_sections.tar.gz" # **REPLACE WITH ACTUAL URL**
+  # Set the OPENMC_CROSS_SECTIONS environment variable for OpenMC
+  # This is set here with a default relative path, but it will be overridden
+  # by the path determined in before_script after extraction.
+  OPENMC_CROSS_SECTIONS: "$NUCLEAR_DATA_DIR/cross_sections/cross_sections.xml" # **ADJUST PATH IF NEEDED based on tarball structure**
+
 
 # Commands run before every job
 before_script:
@@ -27,11 +25,11 @@ before_script:
   - conda activate recore-env
   # Download and extract nuclear data
   - mkdir -p "$NUCLEAR_DATA_DIR"
-  - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$[[inputs.nuclear_data_url]]"
+  - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
   - tar -xzf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
-  # Assuming the extracted data directory is named 'cross_sections'
-  # Set the OPENMC_CROSS_SECTIONS environment variable for OpenMC
-  - export OPENMC_CROSS_SECTIONS="$NUCLEAR_DATA_DIR/cross_sections/cross_sections.xml" # **ADJUST PATH IF NEEDED**
+  # The OPENMC_CROSS_SECTIONS variable is now set correctly in the 'variables' block
+  # It uses the path derived from NUCLEAR_DATA_DIR and the expected extracted directory name.
+
   # Add the project root to PYTHONPATH so Python can find the 'recore' package
   - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
