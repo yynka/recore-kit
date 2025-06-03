@@ -3,124 +3,88 @@
 # Pipeline inputs for manual triggers
 spec:
   inputs:
-    openmc_data_url:
-      description: "URL to the OpenMC data archive (.tar.xz)."
+    nuclear_data_url:
+      description: URL to download the nuclear data archive
       type: string
       # Default data URL (ENDF/B-VIII.0)
-      default: "https://openmc.org/assets/data/ENDF-B%2fVIII.0%2fcross_sections.xml"
+      default: "https://example.com/path/to/cross_sections.tar.gz" # **REPLACE WITH ACTUAL URL**
 
 # Pipeline stages
 stages:
   - lint
-  - test
-  - smoke
-  - analyze
+  - tests
+  - smoke_run
+  - analyze_data
+  - deploy # Optional stage for static export or deployment
+
+variables:
+  # Define the path where nuclear data will be downloaded within the job
+  NUCLEAR_DATA_DIR: "$CI_PROJECT_DIR/nuclear_data"
 
 # Commands run before every job
 before_script:
-  # Install system dependencies
-  - apt-get update && apt-get install -y --no-install-recommends python3 python3-pip python3-venv build-essential cmake git wget tar pkg-config libhdf5-dev libeigen3-dev libfmt-dev libpugix-dev libxtensor-dev libxtl-dev
-
-  # Setup and activate Python venv
-  - python3 -m venv $CI_PROJECT_DIR/recore-env
-  - source $CI_PROJECT_DIR/recore-env/bin/activate
-
-  # Upgrade pip and install project deps
-  - pip install --upgrade pip
-  - pip install -r requirements.txt
-
-  # Install local OpenMC Python API
-  - pip install ./openmc
-
-  # Install linters
-  - pip install flake8 black isort
-
-  # Download, extract, and set OPENMC_CROSS_SECTIONS env var
-  - echo "Downloading OpenMC data from $[[ inputs.openmc_data_url ]]"
-  - wget "$[[ inputs.openmc_data_url ]]" -O cross_sections.xml.tar.gz
-  - mkdir -p $CI_PROJECT_DIR/openmc_data
-  # Strip top-level dir during extract
-  - tar -xzf cross_sections.xml.tar.gz -C $CI_PROJECT_DIR/openmc_data --strip-components=1
-  - rm cross_sections.xml.tar.gz # Clean up archive
-  - export OPENMC_CROSS_SECTIONS=$CI_PROJECT_DIR/openmc_data/cross_sections.xml
-  - echo "OPENMC_CROSS_SECTIONS set to: $OPENMC_CROSS_SECTIONS"
+  # Activate the conda environment
+  - conda activate recore-env
+  # Download and extract nuclear data
+  - mkdir -p "$NUCLEAR_DATA_DIR"
+  - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$[[inputs.nuclear_data_url]]"
+  - tar -xzf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
+  # Assuming the extracted data directory is named 'cross_sections'
+  # Set the OPENMC_CROSS_SECTIONS environment variable for OpenMC
+  - export OPENMC_CROSS_SECTIONS="$NUCLEAR_DATA_DIR/cross_sections/cross_sections.xml" # **ADJUST PATH IF NEEDED**
+  # Add the project root to PYTHONPATH so Python can find the 'recore' package
+  - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
 # Linting job
 lint:
   stage: lint
-  image: python:3.12-slim
   script:
-    # Activate venv
-    - source $CI_PROJECT_DIR/recore-env/bin/activate
-    # Run linters (example: flake8 .)
-    - echo "Running linting..."
+    - echo "Running lint checks (placeholder)"
+    # Add your linting commands here (e.g., flake8, black --check, etc.)
+    - true # Replace with actual lint command
 
 # Pytest job
-test:
-  stage: test
-  image: python:3.12-slim
+tests:
+  stage: tests
   script:
-    # Activate venv
-    - source $CI_PROJECT_DIR/recore-env/bin/activate
-    # Set PYTHONPATH for local imports
-    - export PYTHONPATH=$CI_PROJECT_DIR
-    # Run pytest
-    - echo "Running pytest..."
+    - echo "Running unit tests"
     - pytest recore/
+  needs:
+    - lint # Ensure linting passes before running tests
 
 # OpenMC smoke test job
 smoke_run:
-  stage: smoke
-  image: python:3.12-slim
+  stage: smoke_run
   script:
-    # Activate venv
-    - source $CI_PROJECT_DIR/recore-env/bin/activate
-    # Set PYTHONPATH
-    - export PYTHONPATH=$CI_PROJECT_DIR
-    # Run smoke test script
-    - echo "Running OpenMC smoke test..."
+    - echo "Running OpenMC smoke test"
     - python3 recore/smoke_openmc.py
   artifacts:
     paths:
-      # Collect run outputs
-      - run/statepoint.*.h5
-      - run/mesh_flux.parquet
-      - run/mesh_flux.csv
-      - run/mesh_flux.png
-    expire_in: 1 day
+      - statepoint.10.h5 # Adjust filename if needed
+      - analysis_output.parquet # Parquet file name from analyze.py
+      - analysis_output.csv # CSV file name from analyze.py
+      - mesh_flux_heatmap.png # Plot file name from analyze.py
+    expire_in: 1 week
+  needs:
+    - tests # Ensure tests pass before running the smoke test
 
 # Analysis job
 analyze_data:
-  stage: analyze
-  image: python:3.12-slim
+  stage: analyze_data
   script:
-    # Activate venv
-    - source $CI_PROJECT_DIR/recore-env/bin/activate
-    # Set PYTHONPATH
-    - export PYTHONPATH=$CI_PROJECT_DIR
-    # Ensure run dir exists and run analysis script
-    - mkdir -p run
-    - echo "Running analysis script..."
-    - python3 analyze.py
-  dependencies:
-    # Depends on smoke_run artifacts
-    - smoke_run
-  artifacts:
-    paths:
-      # Collect analysis outputs
-      - run/mesh_flux.csv
-      - run/mesh_flux.png
-    expire_in: 1 day
+    - echo "Analyzing data from smoke run"
+    - python3 analyze.py # This script should use the generated statepoint
+    - pytest recore/test_data.py # Run data analysis tests
+  needs:
+    - smoke_run # Ensure smoke run completes and generates artifacts
 
 # # Optional static export job
-# static_export:
-#   stage: static export
-#   image: python:3.12-slim # Or suitable image
+# deploy:
+#   stage: deploy
 #   script:
-#     - source $CI_PROJECT_DIR/recore-env/bin/activate
-#     # Add static export commands here
-#   # artifacts:
-#   #   paths:
-#   #     - public # For GitLab Pages
-#   # rules:
-#   #   - if: '$CI_COMMIT_BRANCH == "main"'
+#     - echo "Deploying dashboard static export (optional)"
+#     # Commands to build static export or deploy
+#   needs:
+#     - analyze_data # Ensure analysis is complete before deploying
+#   only:
+#     - main # Example: Only deploy from the main branch
