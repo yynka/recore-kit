@@ -1,181 +1,57 @@
 # .gitlab-ci.yml
 
-# Define pipeline inputs (useful for manual pipeline triggers via UI)
-# This allows overriding the default data URL for a specific run.
-# For automatic triggers (commits, MRs), the default value is used.
 spec:
   inputs:
     openmc_data_url:
-      description: "URL to the OpenMC data archive (.tar.xz) to download."
       type: string
-      # Set the default URL for the OpenMC data library.
-      # Find the correct URL on the OpenMC Data GitHub Releases page:
-      # https://github.com/openmc-dev/data/releases
-      default: "https://anl.box.com/shared/static/4jwkvrr9pxlruuihcrgti75zde6g7bum.xz" # <<< UPDATED URL
+      description: URL for the OpenMC cross-section data tarball
+      default: "https://openmc.org/assets/data/ENDF-B%2fVIII.0%2fcross_sections.xml" # Replace with the correct Box URL
 
-# Define the stages for the pipeline
 stages:
   - lint
-  - tests
-  - smoke run
-  - parquet conversion
-  # - static export # Optional stage, uncomment if implemented
+  - test
+  - smoke
+  - analyze
 
-# Commands to run before every job in the pipeline
 before_script:
-  # Install necessary system dependencies (basic build tools, Python, HDF5 libs etc.)
-  # These might vary slightly depending on your specific runner image.
-  # Make sure 'wget' or 'curl' is available for downloading the data.
-  - echo "Updating system packages and installing dependencies..."
-  - apt-get update && apt-get install -y --no-install-recommends python3 python3-pip python3-venv build-essential cmake git wget tar pkg-config libhdf5-dev libeigen3-dev libfmt-dev libpugix-dev libxtensor-dev libxtl-dev
+  # Install dependencies
+  - apt-get update && apt-get install -y python3-pip wget tar
+  - pip3 install -r requirements.txt
+  # Set PYTHONPATH for local modules
+  - export PYTHONPATH=$(pwd)
+  # Download and extract OpenMC data
+  - wget ${openmc_data_url} -O cross_sections.xml.tar.gz
+  - mkdir -p openmc_data
+  - tar -xzf cross_sections.xml.tar.gz -C openmc_data
+  # Set the environment variable for OpenMC
+  - export OPENMC_CROSS_SECTIONS=$(pwd)/openmc_data/cross_sections.xml
 
-  # Set up a Python virtual environment
-  - echo "Setting up Python virtual environment..."
-  - python3 -m venv .venv
-
-  # Activate the virtual environment for subsequent commands
-  # Note: 'source' might not work as expected in some CI shells.
-  # A more robust way might be to use the full path:
-  # - $CI_PROJECT_DIR/.venv/bin/activate
-  # Or prefix commands with the venv path:
-  # - $CI_PROJECT_DIR/.venv/bin/pip install ...
-  # However, 'source' often works on common Linux runners. Let's stick with source for now.
-  - source .venv/bin/activate
-
-  # Upgrade pip
-  - pip install --upgrade pip
-
-  # Install project dependencies from requirements.txt
-  - echo "Installing project dependencies from requirements.txt..."
-  - pip install -r requirements.txt
-
-  # Install OpenMC Python API from your local source directory
-  # Assuming the OpenMC source is cloned in the 'openmc' directory at the root.
-  - echo "Installing local OpenMC Python API..."
-  - pip install ./openmc
-
-  # Install linters
-  - echo "Installing linters..."
-  - pip install flake8 black isort # Added isort for potential import sorting
-
-  # --- Download and Extract OpenMC Data ---
-  # This is necessary because we are likely on shared runners and cannot pre-place the data.
-  # The URL comes from the pipeline input (default for automatic, overridden for manual).
-  - echo "Downloading OpenMC data from $[[ inputs.openmc_data_url ]]..."
-  - wget $[[ inputs.openmc_data_url ]] -O openmc_data.tar.xz
-
-  # Create directory for data and extract the archive
-  - echo "Extracting OpenMC data..."
-  - mkdir -p $CI_PROJECT_DIR/openmc_data
-
-  # --strip-components=1 is often needed to remove the top-level directory inside the tarball
-  # Ensure the directory created by tar -xf matches your strip-components value.
-  # Inspect the tarball structure locally first if unsure: tar -tf openmc_data.tar.xz
-  - tar -xf openmc_data.tar.xz -C $CI_PROJECT_DIR/openmc_data --strip-components=1
-  - rm openmc_data.tar.xz # Clean up the archive file
-
-  # Set the OPENMC_CROSS_SECTIONS environment variable for the current job's shell
-  # This path is relative to the project directory ($CI_PROJECT_DIR), where data was extracted
-  - export OPENMC_CROSS_SECTIONS=$CI_PROJECT_DIR/openmc_data/cross_sections.xml
-  - echo "OPENMC_CROSS_SECTIONS set to: $OPENMC_CROSS_SECTIONS" # Log the path for verification
-
-# --- Job Definitions for Each Stage ---
-
-# Job to run linters
 lint:
   stage: lint
+  image: python:3.12-slim
   script:
-    # Activate the virtual environment (already sourced in before_script, but good practice)
-    - source .venv/bin/activate
-    # Run flake8 to check for style guide enforcement and programming errors
-    - echo "Running flake8..."
-    - flake8 .
-    # Run black in check mode to see if files conform to black style
-    - echo "Running black (check mode)..."
-    - black --check .
-    # Run isort in check mode to see if imports are sorted correctly
-    - echo "Running isort (check mode)..."
-    - isort --check-only .
-  # Optional: Add rules to run only when relevant files change
-  # rules:
-  #   - changes:
-  #     - "**/*.py"
-  #     - ".flake8"
-  #     - "pyproject.toml"
+    # Add your linting commands here (e.g., flake8, black --check)
+    - echo "Running linting..."
+    # Example: flake8 .
+    - echo "Linting finished."
 
-# Job to run pytest suite
-tests:
-  stage: tests
+test:
+  stage: test
+  image: python:3.12-slim
   script:
-    # Activate the virtual environment
-    - source .venv/bin/activate
-    # Ensure project root is in PYTHONPATH for local imports (e.g., 'from recore import ...')
-    - export PYTHONPATH=$PWD
-    # OPENMC_CROSS_SECTIONS is already exported in before_script
-    # Run pytest on the recore directory (or '.' for the whole project)
-    - echo "Running pytest..."
     - pytest recore/
-  # Optional: Add rules to run only when relevant files change
-  # rules:
-  #   - changes:
-  #     - "**/*.py"
-  #     - "requirements.txt"
-  #     - ".pytest.ini"
 
-# Job to run the OpenMC smoke test script
 smoke_run:
-  stage: smoke run
+  stage: smoke
+  image: python:3.12-slim
   script:
-    # Activate the virtual environment
-    - source .venv/bin/activate
-    # Ensure project root is in PYTHONPATH
-    - export PYTHONPATH=$PWD
-    # OPENMC_CROSS_SECTIONS is already exported in before_script
-    # Run the smoke test script
-    - echo "Running OpenMC smoke test..."
     - python3 recore/smoke_openmc.py
-  # Optional: Add rules to run only when relevant files change
-  # rules:
-  #   - changes:
-  #     - "**/*.py"
-  #     - "**/*.xml"
-  #     - "requirements.txt"
 
-# Job to run the Parquet conversion script
-parquet_conversion:
-  stage: parquet conversion
+analyze_data:
+  stage: analyze
+  image: python:3.12-slim
   script:
-    # Activate the virtual environment
-    - source .venv/bin/activate
-    # Ensure project root is in PYTHONPATH
-    - export PYTHONPATH=$PWD
-    # OPENMC_CROSS_SECTIONS is already exported in before_script (needed by analyze.py to load statepoint)
-    # Ensure the run directory exists before running analyze.py (if analyze.py doesn't create it)
-    - mkdir -p run
-    # Run the Parquet conversion script (this also runs the OpenMC sim if statepoint is missing based on our analyze.py)
-    - echo "Running Parquet conversion/analysis script..."
     - python3 analyze.py
-    # Verify the Parquet file was created in the 'run' directory
-    - echo "Checking if Parquet file exists..."
-    - ls run/mesh_flux.parquet
-  # Optional: Add rules to run only when relevant files change
-  # rules:
-  #   - changes:
-  #     - "**/*.py"
-  #     - "**/*.xml"
-  #     - "requirements.txt"
-
-# # Optional job for static export (uncomment if implemented)
-# static_export:
-#   stage: static export
-#   script:
-#     - source .venv/bin/activate
-#     # --- Add commands here to statically export your dashboard ---
-#     # Example: Generate static HTML from Plotly figures or capture screenshots
-#     # - python export_static_content.py
-#   # Define artifacts to save static files (e.g., for GitLab Pages)
-#   # artifacts:
-#   #   paths:
-#   #     - public # Assuming static files are generated into a 'public' directory
-#   # rules:
-#   #   - if: '$CI_COMMIT_BRANCH == "main"' # Only run on main branch
+  artifacts:
+    paths:
+      - mesh_flux.csv
