@@ -1,58 +1,31 @@
-# .gitlab-ci.yml  — corrected lint section
+# .gitlab-ci.yml  (uniform environment)
 
-stages:
-  - lint
-  - tests
-  - smoke_run
-  - analyze_data
-  - deploy
+image: mambaorg/micromamba:1.5.3
 
-variables:
-  NUCLEAR_DATA_DIR: "$CI_PROJECT_DIR/nuclear_data"
-  NUCLEAR_DATA_URL: "https://example.com/path/to/cross_sections.tar.gz"
-  OPENMC_CROSS_SECTIONS: "$NUCLEAR_DATA_DIR/cross_sections/cross_sections.xml"
+stages: [lint, tests, smoke_run, analyze_data]
 
-before_script:
-  - conda activate recore-env
-  - mkdir -p "$NUCLEAR_DATA_DIR"
-  - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
-  - tar -xzf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
-  - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
+# Re‑usable setup (download deps once per job container)
+.default_setup: &setup
+  before_script:
+    - micromamba install -y -n base -c conda-forge python=3.12 \
+        openmc pyarrow polars numba dash plotly pytest black
+    - eval "$(micromamba shell hook -s bash)"
+    - micromamba activate base
+    - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
 lint:
+  <<: *setup
   stage: lint
-  script:
-    - echo "Running lint checks (placeholder)"
-    - black --check recore               # ← or flake8, isort, etc.
+  script: black --check recore
 
 tests:
+  <<: *setup
   stage: tests
-  script:
-    - echo "Running unit tests"
-    - pytest recore/
-  needs:
-    - lint
+  script: pytest recore/
+  needs: [lint]
 
 smoke_run:
+  <<: *setup
   stage: smoke_run
-  script:
-    - echo "Running OpenMC smoke test"
-    - python3 recore/smoke_openmc.py
-  artifacts:
-    paths:
-      - statepoint.10.h5
-      - analysis_output.parquet
-      - analysis_output.csv
-      - mesh_flux_heatmap.png
-    expire_in: 1 week
-  needs:
-    - tests
-
-analyze_data:
-  stage: analyze_data
-  script:
-    - echo "Analyzing data from smoke run"
-    - python3 analyze.py
-    - pytest recore/test_data.py
-  needs:
-    - smoke_run
+  script: python recore/smoke_openmc.py
+  needs: [tests]
