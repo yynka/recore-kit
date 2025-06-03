@@ -73,7 +73,7 @@ def render_tab(tab):
             html.Label("Step Reactivity (ρ):"),
             dcc.Slider(id="rho", min=0.0005, max=0.01, step=0.0005, value=0.002, 
                        marks={i/10000: f"{i/10000:.4f}" for i in range(5, 101, 10)}),
-            dcc.Graph(id="g"),
+        dcc.Graph(id="g"),
         ], style={"marginTop": 30})
     elif tab == "tab-flux":
         return html.Div([

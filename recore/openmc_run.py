@@ -20,34 +20,34 @@ def build_pincell(
     old_cwd = os.getcwd()
     os.chdir(cwd)
     try:
-        # ----- materials -----
-        fuel = openmc.Material(name="U‑Pu‑Zr fuel")
-        fuel.add_element("U", 1.0, enrichment=enrich)  # toy enrichment
-        fuel.set_density("g/cm3", 19.1)
+    # ----- materials -----
+    fuel = openmc.Material(name="U‑Pu‑Zr fuel")
+    fuel.add_element("U", 1.0, enrichment=enrich)  # toy enrichment
+    fuel.set_density("g/cm3", 19.1)
 
-        clad = openmc.Material(name="HT9")
-        clad.add_element("Fe", 1.0)
-        clad.set_density("g/cm3", 7.8)
+    clad = openmc.Material(name="HT9")
+    clad.add_element("Fe", 1.0)
+    clad.set_density("g/cm3", 7.8)
 
-        openmc.Materials([fuel, clad]).export_to_xml()
+    openmc.Materials([fuel, clad]).export_to_xml()
 
-        # ----- geometry -----
-        fuel_cyl = openmc.ZCylinder(r=fuel_r)
-        clad_cyl = openmc.ZCylinder(r=fuel_r * 1.05)
+    # ----- geometry -----
+    fuel_cyl = openmc.ZCylinder(r=fuel_r)
+    clad_cyl = openmc.ZCylinder(r=fuel_r * 1.05)
 
         # Add a bounding box with vacuum boundary
         box = openmc.model.RectangularParallelepiped(
             -pitch/2, pitch/2, -pitch/2, pitch/2, -1.0, 1.0, boundary_type='vacuum'
         )
 
-        cells = [
+    cells = [
             openmc.Cell(fill=fuel, region=-fuel_cyl & -box),
             openmc.Cell(fill=clad, region=+fuel_cyl & -clad_cyl & -box),
             openmc.Cell(region=+clad_cyl & -box),  # outside = void, inside box
             openmc.Cell(region=+box),  # outside box (vacuum boundary)
-        ]
-        root = openmc.Universe(cells=cells)
-        openmc.Geometry(root).export_to_xml()
+    ]
+    root = openmc.Universe(cells=cells)
+    openmc.Geometry(root).export_to_xml()
 
         # ----- tally: regular mesh flux -----
         mesh = openmc.RegularMesh()
@@ -62,14 +62,14 @@ def build_pincell(
         tallies = openmc.Tallies([tally])
         tallies.export_to_xml()
 
-        # ----- settings -----
-        settings = openmc.Settings()
-        settings.batches = batches
-        settings.inactive = 2
-        settings.particles = particles
-        settings.export_to_xml()
+    # ----- settings -----
+    settings = openmc.Settings()
+    settings.batches = batches
+    settings.inactive = 2
+    settings.particles = particles
+    settings.export_to_xml()
 
-        # ----- run -----
+    # ----- run -----
         openmc.run(cwd=".", threads=1, geometry_debug=False)
         return Path(f"statepoint.{batches:03d}.h5")
     finally:

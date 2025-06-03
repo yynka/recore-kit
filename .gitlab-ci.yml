@@ -1,0 +1,175 @@
+# .gitlab-ci.yml
+
+# Define pipeline inputs (useful for manual pipeline triggers via UI)
+# This allows overriding the default data URL for a specific run.
+# For automatic triggers (commits, MRs), the default value is used.
+spec:
+  inputs:
+    openmc_data_url:
+      description: "URL to the OpenMC data archive (.tar.xz) to download."
+      type: string
+      # Set the default URL for the OpenMC data library.
+      # Find the correct URL on the OpenMC Data GitHub Releases page:
+      # https://github.com/openmc-dev/data/releases
+      default: "https://github.com/openmc-dev/data/releases/download/v0.13.0/endfb-viii.0-hdf5-2024-01-01.tar.xz" # <<< UPDATE THIS DEFAULT URL
+
+# Define the stages for the pipeline
+stages:
+  - lint
+  - tests
+  - smoke run
+  - parquet conversion
+  # - static export # Optional stage, uncomment if implemented
+
+# Commands to run before every job in the pipeline
+before_script:
+  # Install necessary system dependencies (basic build tools, Python, HDF5 libs etc.)
+  # These might vary slightly depending on your specific runner image.
+  # Make sure 'wget' or 'curl' is available for downloading the data.
+  - echo "Updating system packages and installing dependencies..."
+  - apt-get update && apt-get install -y --no-install-recommends python3 python3-pip python3-venv build-essential cmake git wget tar pkg-config libhdf5-dev libeigen3-dev libfmt-dev libpugixml-dev libxtensor-dev libxtl-dev
+  # Set up a Python virtual environment
+  - echo "Setting up Python virtual environment..."
+  - python3 -m venv .venv
+  # Activate the virtual environment for subsequent commands
+  - source .venv/bin/activate
+  # Upgrade pip
+  - pip install --upgrade pip
+  # Install project dependencies from requirements.txt
+  # Ensure your requirements.txt is up-to-date with all necessary packages:
+  # (dash, plotly, polars, pyarrow, numba, numpy, pytest, openmc, lxml, pandas)
+  # You can generate this locally with: pip freeze > requirements.txt
+  - echo "Installing project dependencies from requirements.txt..."
+  - pip install -r requirements.txt
+  # Install OpenMC Python API from your local source directory
+  # Assuming the OpenMC source is cloned in the 'openmc' directory at the root.
+  - echo "Installing local OpenMC Python API..."
+  - pip install ./openmc
+  # Install linters
+  - echo "Installing linters..."
+  - pip install flake8 black isort # Added isort for potential import sorting
+
+  # --- Download and Extract OpenMC Data ---
+  # This is necessary because we are likely on shared runners and cannot pre-place the data.
+  # The URL comes from the pipeline input (default for automatic, overridden for manual).
+  - echo "Downloading OpenMC data from $[[ inputs.openmc_data_url ]]..."
+  - wget $[[ inputs.openmc_data_url ]] -O openmc_data.tar.xz
+
+  # Create directory for data and extract the archive
+  - echo "Extracting OpenMC data..."
+  - mkdir -p $CI_PROJECT_DIR/openmc_data
+  # --strip-components=1 is often needed to remove the top-level directory inside the tarball
+  - tar -xf openmc_data.tar.xz -C $CI_PROJECT_DIR/openmc_data --strip-components=1
+  - rm openmc_data.tar.xz # Clean up the archive file
+
+  # Set the OPENMC_CROSS_SECTIONS environment variable for the current job's shell
+  # This path is relative to the project directory ($CI_PROJECT_DIR), where data was extracted
+  - export OPENMC_CROSS_SECTIONS=$CI_PROJECT_DIR/openmc_data/cross_sections.xml
+  - echo "OPENMC_CROSS_SECTIONS set to: $OPENMC_CROSS_SECTIONS" # Log the path for verification
+
+# --- Job Definitions for Each Stage ---
+
+# Job to run linters
+lint:
+  stage: lint
+  script:
+    # Activate the virtual environment
+    - source .venv/bin/activate
+    # Run flake8 to check for style guide enforcement and programming errors
+    - echo "Running flake8..."
+    - flake8 .
+    # Run black in check mode to see if files conform to black style
+    - echo "Running black (check mode)..."
+    - black --check .
+    # Run isort in check mode to see if imports are sorted correctly
+    - echo "Running isort (check mode)..."
+    - isort --check-only .
+  # Only run on changes to Python files (optional but recommended)
+  # rules:
+  #   - changes:
+  #     - "**/*.py"
+  #     - ".flake8"
+  #     - "pyproject.toml" # if using black/isort config here
+
+# Job to run pytest suite
+tests:
+  stage: tests
+  script:
+    # Activate the virtual environment
+    - source .venv/bin/activate
+    # Ensure project root is in PYTHONPATH for local imports (e.g., 'from recore import ...')
+    - export PYTHONPATH=$PWD
+    # Set cross sections path for tests that call OpenMC
+    - export OPENMC_CROSS_SECTIONS=$OPENMC_CROSS_SECTIONS
+    # Run pytest on the recore directory (or '.' for the whole project)
+    - echo "Running pytest..."
+    - pytest recore/
+  # Only run on changes to Python files or test files
+  # rules:
+  #   - changes:
+  #     - "**/*.py"
+  #     - "requirements.txt"
+  #     - ".pytest.ini" # if you have a pytest config file
+
+# Job to run the OpenMC smoke test script
+smoke_run:
+  stage: smoke run
+  script:
+    # Activate the virtual environment
+    - source .venv/bin/activate
+    # Ensure project root is in PYTHONPATH
+    - export PYTHONPATH=$PWD
+    # Set cross sections path for OpenMC run
+    - export OPENMC_CROSS_SECTIONS=$OPENMC_CROSS_SECTIONS
+    # Run the smoke test script
+    - echo "Running OpenMC smoke test..."
+    - python3 recore/smoke_openmc.py
+  # Only run on changes to relevant files
+  # rules:
+  #   - changes:
+  #     - "**/*.py"
+  #     - "**/*.xml"
+  #     - "requirements.txt"
+
+# Job to run the Parquet conversion script
+parquet_conversion:
+  stage: parquet conversion
+  script:
+    # Activate the virtual environment
+    - source .venv/bin/activate
+    # Ensure project root is in PYTHONPATH
+    - export PYTHONPATH=$PWD
+    # Need cross sections path because analyze.py loads the statepoint
+    - export OPENMC_CROSS_SECTIONS=$OPENMC_CROSS_SECTIONS
+    # Ensure the run directory exists before running analyze.py
+    - mkdir -p run
+    # Run the Parquet conversion script (which also generates the statepoint if not exists via analyze.py calling openmc_run.py)
+    # NOTE: If analyze.py *only* converts, you'd need to ensure smoke_run completes first or call openmc_run.py here.
+    # Assuming analyze.py internally handles the run or expects a statepoint.
+    # Based on previous interactions, analyze.py runs the sim if needed.
+    - echo "Running Parquet conversion/analysis script..."
+    - python3 analyze.py
+    # Verify the Parquet file was created in the 'run' directory
+    - echo "Checking if Parquet file exists..."
+    - ls run/mesh_flux.parquet
+  # Only run on changes to relevant files
+  # rules:
+  #   - changes:
+  #     - "**/*.py"
+  #     - "**/*.xml"
+  #     - "requirements.txt"
+
+# # Optional job for static export (uncomment if implemented)
+# static_export:
+#   stage: static export
+#   script:
+#     - source .venv/bin/activate
+#     # --- Add commands here to statically export your dashboard ---
+#     # Example: Generate static HTML from Plotly figures or capture screenshots
+#     # - python export_static_content.py
+#   # Define artifacts to save static files (e.g., for GitLab Pages)
+#   # artifacts:
+#   #   paths:
+#   #     - public # Assuming static files are generated into a 'public' directory
+#   # rules:
+#   #   - if: '$CI_COMMIT_BRANCH == "main"' # Only run on main branch
