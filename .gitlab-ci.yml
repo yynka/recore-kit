@@ -16,14 +16,11 @@ variables:
         openmc pyarrow polars numba dash plotly pytest black wget xz
     - eval "$(micromamba shell hook -s bash)"
     - micromamba activate base
-    # Add steps to download and extract nuclear data
+    # Steps to download and extract nuclear data
     - mkdir -p "$NUCLEAR_DATA_DIR"
     - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
     - tar -xJf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
-<<<<<<< HEAD
     - ls -R "$NUCLEAR_DATA_DIR"
-=======
->>>>>>> d9bc074675cf3b1e74305539dadb104f9f59eb28
     - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
 lint:
