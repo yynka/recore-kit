@@ -4,50 +4,29 @@ image: mambaorg/micromamba:1.5.3
 
 stages: [lint, tests, smoke_run, analyze_data]
 
-# Re‑usable setup (download deps once per job container)
-.default_setup: &setup
-  before_script:
-    - micromamba install -y -n base -c conda-forge python=3.12 \
-        openmc pyarrow polars numba dash plotly pytest black
-    - eval "$(micromamba shell hook -s bash)"
-    - micromamba activate base
-    - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
-
-lint:
-  <<: *setup
-  stage: lint
-  script: black --check recore# .gitlab-ci.yml  (uniform environment)
-
-image: mambaorg/micromamba:1.5.3
-
-stages: [lint, tests, smoke_run, analyze_data]
+variables:
+  NUCLEAR_DATA_DIR: "$CI_PROJECT_DIR/nuclear_data"
+  NUCLEAR_DATA_URL: "https://anl.box.com/shared/static/9igk353zpy8fn9ttvtrqgzvw1vtejoz6.xz"
+  OPENMC_CROSS_SECTIONS: "$NUCLEAR_DATA_DIR/cross_sections/cross_sections.xml"
 
 # Re‑usable setup (download deps once per job container)
 .default_setup: &setup
   before_script:
     - micromamba install -y -n base -c conda-forge python=3.12 \
-        openmc pyarrow polars numba dash plotly pytest black
+        openmc pyarrow polars numba dash plotly pytest black wget xz
     - eval "$(micromamba shell hook -s bash)"
     - micromamba activate base
+    # Add steps to download and extract nuclear data
+    - mkdir -p "$NUCLEAR_DATA_DIR"
+    - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
+    - tar -xJf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
+    - ls -R "$NUCLEAR_DATA_DIR"
     - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
 lint:
   <<: *setup
   stage: lint
   script: black --check recore
-
-tests:
-  <<: *setup
-  stage: tests
-  script: pytest recore/
-  needs: [lint]
-
-smoke_run:
-  <<: *setup
-  stage: smoke_run
-  script: python recore/smoke_openmc.py
-  needs: [tests]
-
 
 tests:
   <<: *setup
