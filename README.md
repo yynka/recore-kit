@@ -1,32 +1,22 @@
-# <span style="vertical-align: middle;">ReCore-Kit</span>
+# <span style="vertical-align: middle;">Recore-Kit</span>
 <p align="center">
-  <a href="#docker-installation"><img src="readme-assets/docker.svg" alt="Docker" height="60" style="vertical-align: middle; margin: 0 20px;"/></a>
-  <a href="#gitlab-installation"><img src="readme-assets/gitlab.svg" alt="GitLab" height="60" style="vertical-align: middle; margin: 0 20px;"/></a>
-  <a href="#github-installation"><img src="readme-assets/github.svg" alt="GitHub" height="60" style="vertical-align: middle; margin: 0 20px;"/></a>
+  <a href="#docker-installation"><img src="readme-assets/docker.svg" alt="Docker" height="60" style="vertical-align: middle; margin: 0 48px;"/></a>
+  <a href="#gitlab-installation"><img src="readme-assets/gitlab.svg" alt="GitLab" height="60" style="vertical-align: middle; margin: 0 48px;"/></a>
+  <a href="#github-installation"><img src="readme-assets/github.svg" alt="GitHub" height="60" style="vertical-align: middle; margin: 0 48px;"/></a>
 </p>
+<br><br>
 
 > **A reproducible, portable, and fully automated toolkit for nuclear reactor core simulation, analysis, and visualization. Run OpenMC-based physics simulations, analyze results, and explore data interactively—all with a single command, on any platform.**
 
-<span style="font-size: 1.2em; line-height: 1.6em;">
 - ⚛️ **Full nuclear simulation workflow:** OpenMC-based fast-spectrum pin-cell simulations and analysis.
 - 🔁 **Reproducible & portable:** All dependencies, nuclear data, and environment setup are automated.
 - 🐳 **Run anywhere:** Use Docker for a one-command setup, or install via GitLab/GitHub for development and CI/CD.
 - 📊 **Interactive dashboard:** Visualize and explore results with a built-in Dash web app.
 - ✅ **Continuous integration:** Every commit is tested for code quality, simulation correctness, and analysis validity.
-</span>
 
 ---
 
-## 🚀 Quick Start
-
-**Choose your preferred install method:**
-- [Docker (Recommended)](#docker-installation)
-- [GitLab (CI/CD & Collaboration)](#gitlab-installation)
-- [GitHub (Development)](#github-installation)
-
----
-
-## Docker Installation <a id="docker-installation"></a> <img src="readme-assets/docker.svg" alt="Docker" height="40" align="right"/>
+## Docker Installation **Recommended** <a id="docker-installation"></a> <img src="readme-assets/docker.svg" alt="Docker" height="40" align="right"/>
 
 ### 1. Build the Docker image
 ```sh
