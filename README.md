@@ -16,7 +16,7 @@
 
 ---
 
-## Docker Installation **Recommended** <a id="docker-installation"></a> <img src="readme-assets/docker.svg" alt="Docker" height="40" align="right"/>
+## Docker Installation    (Recommended) <a id="docker-installation"></a> <img src="readme-assets/docker.svg" alt="Docker" height="40" align="right"/>
 
 ### 1. Build the Docker image
 ```sh
