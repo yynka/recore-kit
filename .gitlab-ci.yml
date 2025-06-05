@@ -41,6 +41,7 @@ smoke_run:
   needs: [tests]
 
 analyze_data:
+  <<: *setup
   stage: analyze_data
   script:
     - echo "Analyzing data from smoke run"
