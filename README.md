@@ -1,242 +1,108 @@
-# <span style="vertical-align: middle;">Recore-Kit</span>
-<p align="center">
-  <a href="#docker-installation"><img src="readme-assets/docker.svg" alt="Docker" height="60" style="vertical-align: middle; margin: 0 48px;"/></a>
-  <a href="#gitlab-installation"><img src="readme-assets/gitlab.svg" alt="GitLab" height="60" style="vertical-align: middle; margin: 0 48px;"/></a>
-  <a href="#github-installation"><img src="readme-assets/github.svg" alt="GitHub" height="60" style="vertical-align: middle; margin: 0 48px;"/></a>
-</p>
-<br><br>
+# ReCore: Nuclear Physics Simulation & Analysis Toolkit
 
-> **A reproducible, portable, and fully automated toolkit for nuclear reactor core simulation, analysis, and visualization. Run OpenMC-based physics simulations, analyze results, and explore data interactively—all with a single command, on any platform.**
+A Python toolkit for nuclear physics simulation and analysis, built on top of OpenMC.
 
-- ⚛️ **Full nuclear simulation workflow:** OpenMC-based fast-spectrum pin-cell simulations and analysis.
-- 🔁 **Reproducible & portable:** All dependencies, nuclear data, and environment setup are automated.
-- 🐳 **Run anywhere:** Use Docker for a one-command setup, or install via GitLab/GitHub for development and CI/CD.
-- 📊 **Interactive dashboard:** Visualize and explore results with a built-in Dash web app.
-- ✅ **Continuous integration:** Every commit is tested for code quality, simulation correctness, and analysis validity.
+## Running the GUI
 
----
-
-## Docker Installation    (Recommended) <a id="docker-installation"></a> <img src="readme-assets/docker.svg" alt="Docker" height="40" align="right"/>
-
-### 1. Build the Docker image
-```sh
-docker build -t recore-kit .
+```bash
+recore-gui
 ```
+The dashboard will open in your browser automatically.
 
-### 2. Run the OpenMC simulation (smoke test)
-```sh
-docker run --rm recore-kit
-```
+## Features
 
-### 3. Run the analysis
-```sh
-docker run --rm recore-kit python analyze.py
-```
+- **Smoke Testing**: Verify your OpenMC installation
+- **Data Analysis**: Process and analyze nuclear simulation data
+- **Interactive Dashboard**: Visualize results with an easy-to-use interface
+- **Automatic Setup**: Downloads required nuclear data automatically
 
-### 4. Run the dashboard (optional)
-```sh
-docker run --rm -p 8051:8051 recore-kit python dashboards/app.py
-```
-Then open your browser to [http://localhost:8051](http://localhost:8051)
+## Installation
 
-You can override the default command to run any script in the container as needed.
+```bash
+# Create virtual environment
+python -m venv recore-env
 
----
+# Activate virtual environment
+source recore-env/bin/activate  # On Unix/macOS
+# OR
+.\recore-env\Scripts\activate  # On Windows
 
-## GitLab Installation <a id="gitlab-installation"></a> <img src="readme-assets/gitlab.svg" alt="GitLab" height="40" align="right"/>
-
-### 1. Clone the Repository
-```sh
-git clone https://gitlab.com/yynka/recore-kit.git
-cd recore-kit
-```
-
-### 2. Set Up Python Environment
-
-**Mamba (recommended for speed):**
-```sh
-mamba create -n recore-env -c conda-forge python=3.12 openmc pyarrow polars numba dash plotly pytest black wget xz
-conda activate recore-env
-
+# Install dependencies
 pip install -r requirements.txt
+
+# Install the package
+pip install -e .
 ```
 
-**Micromamba:**
-```sh
-micromamba create -y -n recore-env -c conda-forge python=3.12 openmc pyarrow polars numba dash plotly pytest black wget xz
-micromamba activate recore-env
-
-pip install -r requirements.txt
-```
-
-**Conda:**
-```sh
-conda create -n recore-env -c conda-forge python=3.12 openmc pyarrow polars numba dash plotly pytest black wget xz
-conda activate recore-env
-
-pip install -r requirements.txt
-```
-
-### 3. Download and Extract Nuclear Data
-You must download the OpenMC cross section data (ENDF/B-VII.1 HDF5):
-```sh
-mkdir -p nuclear_data
-wget -O nuclear_data/cross_sections.tar.gz "https://anl.box.com/shared/static/9igk353zpy8fn9ttvtrqgzvw1vtejoz6.xz"
-tar -xJf nuclear_data/cross_sections.tar.gz -C nuclear_data
-```
-
-Set the environment variable so OpenMC can find the data:
-```sh
-export OPENMC_CROSS_SECTIONS="$PWD/nuclear_data/endfb-vii.1-hdf5/cross_sections.xml"
-```
-
-### 4. Run the OpenMC Simulation (Smoke Test)
-From the project root:
-```sh
-python recore/smoke_openmc.py
-```
-This will run a minimalist fast-spectrum pin-cell simulation and produce a statepoint file (e.g., `statepoint.020.h5`).
-
-### 5. Run the Analysis
-```sh
-python analyze.py
-```
-This will process the simulation output. You can also run additional tests:
-```sh
-pytest recore/test_data.py
-```
-
-### 6. Run the Dashboard (Optional)
-From the project root:
-```sh
-PYTHONPATH=$(pwd) python3 dashboards/app.py
-```
-
-Then open your browser to [http://localhost:8051](http://localhost:8051)
-
-### 7. Run the Kinetics Solver Tests (Optional)
-```sh
-pytest recore/test_kinetics.py
-```
-
----
-
-## GitHub Installation <a id="github-installation"></a> <img src="readme-assets/github.svg" alt="GitHub" height="40" align="right"/>
-
-### 1. Clone the Repository
-```sh
+```bash
+# Clone the repository
 git clone https://github.com/yynka/recore-kit.git
 cd recore-kit
-```
 
-### 2. Set Up Python Environment
-
-**Mamba (recommended for speed):**
-```sh
-mamba create -n recore-env -c conda-forge python=3.12 openmc pyarrow polars numba dash plotly pytest black wget xz
+# Set up environment (if not done already)
+conda create -n recore python=3.13.4
 conda activate recore-env
 
-pip install -r requirements.txt
+# Install the package in development mode
+pip install -e .
 ```
 
-**Micromamba:**
-```sh
-micromamba create -y -n recore-env -c conda-forge python=3.12 openmc pyarrow polars numba dash plotly pytest black wget xz
-micromamba activate recore-env
+## Using ReCore
 
-pip install -r requirements.txt
-```
+1. **Launch the GUI**:
+   ```bash
+   recore-gui
+   ```
+   This will:
+   - Download required nuclear data if not present
+   - Open the dashboard in your browser
+   - Guide you through the analysis process
 
-**Conda:**
-```sh
-conda create -n recore-env -c conda-forge python=3.12 openmc pyarrow polars numba dash plotly pytest black wget xz
-conda activate recore-env
+2. **Run the Smoke Test**:
+   - Open the "Smoke Test" tab
+   - Click "Run Smoke Test" to verify your installation
 
-pip install -r requirements.txt
-```
+3. **Analyze Data**:
+   - Open the "Analysis" tab
+   - Upload your simulation data
+   - Click "Run Analysis" to process your data
 
-### 3. Download and Extract Nuclear Data
-You must download the OpenMC cross section data (ENDF/B-VII.1 HDF5):
-```sh
-mkdir -p nuclear_data
-wget -O nuclear_data/cross_sections.tar.gz "https://anl.box.com/shared/static/9igk353zpy8fn9ttvtrqgzvw1vtejoz6.xz"
-tar -xJf nuclear_data/cross_sections.tar.gz -C nuclear_data
-```
-
-Set the environment variable so OpenMC can find the data:
-```sh
-export OPENMC_CROSS_SECTIONS="$PWD/nuclear_data/endfb-vii.1-hdf5/cross_sections.xml"
-```
-
-### 4. Run the OpenMC Simulation (Smoke Test)
-From the project root:
-```sh
-python recore/smoke_openmc.py
-```
-This will run a minimalist fast-spectrum pin-cell simulation and produce a statepoint file (e.g., `statepoint.020.h5`).
-
-### 5. Run the Analysis
-```sh
-python analyze.py
-```
-This will process the simulation output. You can also run additional tests:
-```sh
-pytest recore/test_data.py
-```
-
-### 6. Run the Dashboard (Optional)
-From the project root:
-```sh
-PYTHONPATH=$(pwd) python3 dashboards/app.py
-```
-
-Then open your browser to [http://localhost:8051](http://localhost:8051)
-
-### 7. Run the Kinetics Solver Tests (Optional)
-```sh
-pytest recore/test_kinetics.py
-```
+4. **View Results**:
+   - Open the "Dashboard" tab
+   - View your analysis results
+   - Export results as needed
 
 ## Project Structure
-- `recore/openmc_run.py` — Minimalist OpenMC pin-cell simulation setup and execution
-- `recore/smoke_openmc.py` — Smoke test entry point for OpenMC simulation
-- `analyze.py` — Analysis of OpenMC simulation results
-- `recore/test_data.py` — Tests for analysis output
-- `recore/kinetics.py` — Point-reactor kinetics solver
-- `recore/test_kinetics.py` — Unit tests for the solver
-- `dashboards/app.py` — Dash web app for interactive exploration
 
-## CI/CD Pipeline
-This project uses GitLab CI/CD to ensure code quality and scientific reproducibility. The pipeline includes:
-- **lint**: Checks Python code formatting with Black
-- **tests**: Runs all unit tests in `recore/` with pytest
-- **smoke_run**: Runs a minimal OpenMC simulation (`smoke_openmc.py`)
-- **analyze_data**: Runs analysis (`analyze.py`) and further tests (`recore/test_data.py`)
+```
+recore/
+├── analyze.py      # Analysis tools
+├── gui.py         # Interactive dashboard
+├── smoke_openmc.py # Smoke test for OpenMC
+└── utils.py       # Utility functions
+```
 
-## Troubleshooting
-- If you see `ModuleNotFoundError: No module named 'recore'`, make sure to set `PYTHONPATH` to the project root when running scripts:
-  ```sh
-  export PYTHONPATH=$(pwd)
-  # or, for a one-off command:
-  PYTHONPATH=$(pwd) python3 dashboards/app.py
-  ```
-- If OpenMC cannot find `cross_sections.xml`, ensure you have downloaded and extracted the nuclear data, and set the `OPENMC_CROSS_SECTIONS` environment variable to the correct path (see above):
-  ```sh
-  mkdir -p nuclear_data
-  wget -O nuclear_data/cross_sections.tar.gz "https://anl.box.com/shared/static/9igk353zpy8fn9ttvtrqgzvw1vtejoz6.xz"
-  tar -xJf nuclear_data/cross_sections.tar.gz -C nuclear_data
-  export OPENMC_CROSS_SECTIONS="$PWD/nuclear_data/endfb-vii.1-hdf5/cross_sections.xml"
-  ```
-- For OpenMC build issues on Apple Silicon, ensure you use Homebrew GCC and follow the build steps:
-  ```sh
-  brew install gcc
-  cd openmc
-  mkdir build && cd build
-  CC=/opt/homebrew/bin/gcc-14 CXX=/opt/homebrew/bin/g++-14 cmake .. -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX
-  make -j4
-  make install
-  cd ..
-  pip install .
-  ```
+## Development
 
----
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Format code
+black .
+```
+
+## License
+
+MIT License
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
