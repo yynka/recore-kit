@@ -2,13 +2,6 @@
 
 A Python toolkit for nuclear physics simulation and analysis, built on top of OpenMC.
 
-## Running the GUI
-
-```bash
-recore-gui
-```
-The dashboard will open in your browser automatically.
-
 ## Features
 
 - **Smoke Testing**: Verify your OpenMC installation
