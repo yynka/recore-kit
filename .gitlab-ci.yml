@@ -11,17 +11,16 @@ variables:
 
 # Re‑usable setup (download deps once per job container)
 .default_setup: &setup
-before_script:
-    - micromamba install -y -n base -c conda-forge python=3.12 \
-        openmc pyarrow polars numba dash plotly pytest black wget xz
+  before_script:
+    - micromamba install -y -n base -c conda-forge python=3.12 openmc pyarrow polars numba dash plotly pytest black wget xz
     - eval "$(micromamba shell hook -s bash)"
     - micromamba activate base
     # Steps to download and extract nuclear data
-  - mkdir -p "$NUCLEAR_DATA_DIR"
-  - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
+    - mkdir -p "$NUCLEAR_DATA_DIR"
+    - wget -O "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" "$NUCLEAR_DATA_URL"
     - tar -xJf "$NUCLEAR_DATA_DIR/cross_sections.tar.gz" -C "$NUCLEAR_DATA_DIR"
     - ls -R "$NUCLEAR_DATA_DIR"
-  - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
+    - export PYTHONPATH="$CI_PROJECT_DIR:$PYTHONPATH"
 
 lint:
   <<: *setup

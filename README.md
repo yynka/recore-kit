@@ -19,6 +19,10 @@ The dashboard will open in your browser automatically.
 ## Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/yynka/recore-kit.git
+cd recore-kit
+
 # Create virtual environment
 python -m venv recore-env
 
@@ -32,12 +36,6 @@ pip install -r requirements.txt
 
 # Install the package
 pip install -e .
-```
-
-```bash
-# Clone the repository
-git clone https://github.com/yynka/recore-kit.git
-cd recore-kit
 
 # Set up environment (if not done already)
 conda create -n recore python=3.13.4
