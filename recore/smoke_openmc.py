@@ -1,5 +1,6 @@
 from recore.openmc_run import build_pincell
 
+
 def main():
     """Run the smoke test and return True if successful."""
     try:
@@ -9,6 +10,7 @@ def main():
     except Exception as e:
         print(f"Smoke test failed: {e}")
         return False
+
 
 if __name__ == "__main__":
     main()
