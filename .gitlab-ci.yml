@@ -43,6 +43,10 @@ smoke_run:
   stage: smoke_run
   script:
     - python recore/smoke_openmc.py
+  artifacts:
+    paths:
+      - run/
+    expire_in: 1 hour
   needs: ["tests"]
 
 analyze_data:
